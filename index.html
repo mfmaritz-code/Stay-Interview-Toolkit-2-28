@@ -5,34 +5,135 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stay Interview Toolkit</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
-        body { font-family: 'Montserrat', sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap');
+        body { font-family: 'Montserrat', sans-serif; background-color: #fcfcfd; }
+        .animate-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        // Since we are in a browser, we destructure from the window object instead of 'import'
         const { useState, useEffect } = React;
-        
-        // This is a simplified version to get you running. 
-        // In this environment, you'd use lucide.createIcons() or a wrapper.
-        
+
+        // --- Configuration ---
+        const TRIGGERS = ["90-Day Milestone", "Post-Promotion", "Post-Reorganization", "Annual Check-In", "At-Risk Signal", "Other"];
+        const PERSONAS = ["High Performer / IC", "Recently Promoted / New to Role", "Tenured / Steady Performer", "At-Risk / Showing Disengagement", "New Hire (under 6 months)", "Other"];
+        const SENTIMENTS = ["Energized but stretched", "Quiet/withdrawn recently", "Frustrated with project outcomes", "Unclear on growth path", "Thriving, want to keep momentum", "Other"];
+
+        // --- Main Component ---
         function App() {
-            return (
-                <div className="min-h-screen bg-gray-50 p-8">
-                    <div className="max-w-2xl mx-auto bg-white rounded-3xl shadow-sm p-10 border border-gray-100 text-center">
-                        <h1 className="text-3xl font-bold text-blue-600 mb-4">Stay Interview Toolkit</h1>
-                        <p className="text-gray-600">Your React environment is now loading correctly!</p>
-                        <div className="mt-8 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm">
-                           Note: To use your full complex code, you need to use a tool like <strong>Vite</strong>.
+            const [config, setConfig] = useState({ 
+                trigger: '', customTrigger: '', 
+                type: 'Standard (Manager-led)', 
+                persona: '', customPersona: '', 
+                sentiment: '' 
+            });
+            const [step, setStep] = useState(1);
+            const [loading, setLoading] = useState(false);
+            const [guide, setGuide] = useState(null);
+
+            // Mock generation for the demo (since API key is empty)
+            const handleGenerate = () => {
+                setLoading(true);
+                setTimeout(() => {
+                    setGuide({
+                        openingScript: "I'm so glad we're sitting down. You're a vital part of this team and I want to ensure your role continues to be fulfilling.",
+                        tieredQuestions: [
+                            { category: "Role Satisfaction", questions: ["What do you look forward to most when you start your workday?", "What part of your job would you eliminate if you could?"] }
+                        ],
+                        actionMatrix: [
+                            { insight: "Feeling Stretched", controllable: "Re-prioritize current tasks", uncontrollable: "Headcount request for Q3" }
+                        ]
+                    });
+                    setLoading(false);
+                }, 1500);
+            };
+
+            if (guide) {
+                return (
+                    <div className="max-w-4xl mx-auto p-6">
+                        <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
+                            <h2 className="text-2xl font-bold mb-4">Your Coaching Guide</h2>
+                            <div className="bg-blue-50 p-6 rounded-xl border-l-4 border-blue-500 mb-6 italic text-gray-700">
+                                "{guide.openingScript}"
+                            </div>
+                            <button 
+                                onClick={() => setGuide(null)}
+                                className="bg-gray-200 text-gray-700 px-6 py-2 rounded-xl font-bold hover:bg-gray-300 transition-all"
+                            >
+                                Reset & Start Over
+                            </button>
                         </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="max-w-2xl mx-auto p-6 pt-12">
+                    <header className="text-center mb-10">
+                        <h1 className="text-4xl font-black text-gray-900 mb-2">STAY INTERVIEW TOOLKIT</h1>
+                        <p className="text-gray-500">Tailored retention conversations.</p>
+                    </header>
+
+                    <div className="bg-white rounded-3xl shadow-xl p-8 md:p-10 border border-gray-100">
+                        {/* Step 1: Trigger */}
+                        {step === 1 && (
+                            <div className="space-y-6">
+                                <label className="block text-sm font-black uppercase tracking-widest text-blue-600">1. Select Trigger</label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    {TRIGGERS.map(t => (
+                                        <button key={t} onClick={() => setConfig({...config, trigger: t})}
+                                            className={`p-4 text-sm rounded-xl border text-left transition-all ${config.trigger === t ? 'border-blue-600 bg-blue-50 text-blue-700 font-bold' : 'border-gray-200 text-gray-600'}`}>
+                                            {t}
+                                        </button>
+                                    ))}
+                                </div>
+                                <button disabled={!config.trigger} onClick={() => setStep(2)} className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg disabled:opacity-50">Continue</button>
+                            </div>
+                        )}
+
+                        {/* Step 2: Persona */}
+                        {step === 2 && (
+                            <div className="space-y-6">
+                                <label className="block text-sm font-black uppercase tracking-widest text-blue-600">2. Employee Persona</label>
+                                <div className="grid grid-cols-1 gap-2">
+                                    {PERSONAS.map(p => (
+                                        <button key={p} onClick={() => setConfig({...config, persona: p})}
+                                            className={`p-4 text-sm rounded-xl border text-left transition-all ${config.persona === p ? 'border-blue-600 bg-blue-50 text-blue-700 font-bold' : 'border-gray-200 text-gray-600'}`}>
+                                            {p}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="flex gap-4">
+                                    <button onClick={() => setStep(1)} className="w-1/3 text-gray-400 font-bold">Back</button>
+                                    <button disabled={!config.persona} onClick={() => setStep(3)} className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg disabled:opacity-50">Continue</button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Step 3: Sentiment */}
+                        {step === 3 && (
+                            <div className="space-y-6">
+                                <label className="block text-sm font-black uppercase tracking-widest text-blue-600">3. Current Sentiment</label>
+                                <select onChange={(e) => setConfig({...config, sentiment: e.target.value})} className="w-full p-4 rounded-xl border border-gray-200 font-bold">
+                                    <option value="">Select vibe...</option>
+                                    {SENTIMENTS.map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                                <div className="flex gap-4">
+                                    <button onClick={() => setStep(2)} className="w-1/3 text-gray-400 font-bold">Back</button>
+                                    <button disabled={!config.sentiment || loading} onClick={handleGenerate} className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg">
+                                        {loading ? "Generating..." : "Generate Toolkit"}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             );
