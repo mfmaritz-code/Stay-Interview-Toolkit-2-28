@@ -10,291 +10,113 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap');
-        body { font-family: 'Montserrat', sans-serif !important; }
-        .font-sans { font-family: 'Montserrat', sans-serif !important; }
-        @media print {
-            @page { size: portrait; margin: 15mm; }
-            .print\:hidden { display: none !important; }
-            .print\:block { display: block !important; }
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap');
+        body { font-family: 'Montserrat', sans-serif; background-color: #fcfcfd; }
+        #root { min-height: 100vh; }
+        /* Simple Loading State */
+        .loading-screen { display: flex; justify-content: center; align-items: center; height: 100vh; font-weight: bold; color: #2563eb; }
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div id="root">
+        <div class="loading-screen">Preparing your toolkit...</div>
+    </div>
 
     <script type="text/babel">
-        // Destructuring React hooks from the window object
         const { useState, useEffect } = React;
 
-        // --- Icon Wrapper Component ---
-        const Icon = ({ name, size = 20, className = "" }) => {
-            const [iconElement, setIconElement] = useState(null);
+        // Simple Icon component that works without complex imports
+        const LucideIcon = ({ name, size = 20 }) => {
             useEffect(() => {
-                // Lucide browser helper
-                if (window.lucide) {
-                    const iconNode = window.lucide.icons[name];
-                    if (iconNode) {
-                        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-                        // Apply standard Lucide attributes
-                        Object.entries({
-                            ...iconNode[1],
-                            width: size,
-                            height: size,
-                            class: `lucide lucide-${name} ${className}`,
-                            fill: "none",
-                            stroke: "currentColor",
-                            "stroke-width": "2",
-                            "stroke-linecap": "round",
-                            "stroke-linejoin": "round"
-                        }).forEach(([key, value]) => svg.setAttribute(key, value));
-                        
-                        iconNode[2].forEach(child => {
-                            const childEl = document.createElementNS("http://www.w3.org/2000/svg", child[0]);
-                            Object.entries(child[1]).forEach(([k, v]) => childEl.setAttribute(k, v));
-                            svg.appendChild(childEl);
-                        });
-                        setIconElement(svg);
-                    }
-                }
-            }, [name, size, className]);
-
-            return iconElement ? <span dangerouslySetInnerHTML={{ __html: iconElement.outerHTML }} /> : null;
+                if (window.lucide) window.lucide.createIcons();
+            }, [name]);
+            return <i data-lucide={name} style={{ width: size, height: size }}></i>;
         };
 
-        // --- Your Constants ---
-        const TRIGGERS = ["90-Day Milestone", "Post-Promotion", "Post-Reorganization", "Annual Check-In", "At-Risk Signal", "Other"];
-        const PERSONAS = ["High Performer / IC", "Recently Promoted / New to Role", "Tenured / Steady Performer", "At-Risk / Showing Disengagement", "New Hire (under 6 months)", "Other"];
-        const SENTIMENTS = ["Energized but stretched", "Quiet/withdrawn recently", "Frustrated with project outcomes", "Unclear on growth path", "Thriving, want to keep momentum", "Other"];
-        const INTERVIEW_TYPES = [
-            { id: 'standard', label: 'Standard (Manager-led)', icon: 'User' },
-            { id: 'skip', label: 'Skip-Level (Boss\'s Boss)', icon: 'TrendingUp' }
-        ];
-
-        // --- Your AI Logic ---
-        const generateStayGuide = async (config) => {
-            const apiKey = ""; // Add your key if using Gemini locally
-            const finalTrigger = config.trigger === "Other" ? config.customTrigger : config.trigger;
-            const finalPersona = config.persona === "Other" ? config.customPersona : config.persona;
-            const finalSentiment = config.sentiment === "Other" ? config.customSentiment : config.sentiment;
-
-            // Simplified Mock Response for when API Key is missing
-            if (!apiKey) {
-                return {
-                    openingScript: `I've been thinking about your growth here. Since it's your ${finalTrigger}, I want to make sure you're getting what you need.`,
-                    tieredQuestions: [
-                        { category: "Core Engagement", questions: [`What is the best part of your job as a ${finalPersona}?`, "What keeps you here?"] },
-                        { category: "Growth", questions: ["What do you want to learn next?", "How can I better support you?"] }
-                    ],
-                    actionMatrix: [
-                        { insight: "Needs more challenge", controllable: "Assign lead on next project", uncontrollable: "Review compensation band" }
-                    ]
-                };
-            }
-            // ... (Your original fetch logic would go here)
-        };
-
-        // --- UI Components (Your original code adapted) ---
-        const StepIndicator = ({ currentStep }) => (
-            <div className="flex items-center justify-between mb-8 print:hidden">
-                {[1, 2, 3].map((step) => (
-                    <div key={step} className="flex items-center flex-1 text-center">
-                        <div className={`w-8 h-8 rounded-full mx-auto flex items-center justify-center font-bold text-xs transition-colors ${currentStep >= step ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-400'}`}>
-                            {step}
-                        </div>
-                        {step < 3 && <div className={`h-0.5 flex-1 mx-2 ${currentStep > step ? 'bg-blue-600' : 'bg-gray-200'}`} />}
-                    </div>
-                ))}
-            </div>
-        );
-
-        const ConfidentialityNotice = () => (
-            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3 shadow-sm mb-8 print:hidden">
-                <Icon name="ShieldAlert" className="text-amber-600 mt-0.5" />
-                <div className="space-y-1">
-                    <h4 className="text-sm font-bold text-amber-900">Confidentiality Notice</h4>
-                    <p className="text-[11px] text-amber-800 font-medium leading-relaxed">This conversation is private. Escalate immediately if legal or safety concerns are raised.</p>
-                </div>
-            </div>
-        );
-
-        const ManagerForm = ({ config, setConfig, onGenerate, loading }) => {
+        function App() {
             const [step, setStep] = useState(1);
-            const isFormValid = () => {
-                if (step === 1) return config.trigger && (config.trigger !== "Other" || config.customTrigger.trim()) && config.type;
-                if (step === 2) return config.persona && (config.persona !== "Other" || config.customPersona.trim());
-                if (step === 3) return config.sentiment !== "";
-                return true;
+            const [config, setConfig] = useState({ trigger: '', persona: '', sentiment: '' });
+            const [loading, setLoading] = useState(false);
+            const [guide, setGuide] = useState(null);
+
+            const handleGenerate = () => {
+                setLoading(true);
+                // Simulate AI Generation
+                setTimeout(() => {
+                    setGuide({
+                        opening: "I'm so glad we're sitting down. You're a vital part of this team.",
+                        questions: ["What do you look forward to most each day?", "What keeps you here?"]
+                    });
+                    setLoading(false);
+                }, 1000);
             };
 
+            if (guide) {
+                return (
+                    <div className="max-w-2xl mx-auto p-8 mt-10 bg-white shadow-2xl rounded-3xl border border-gray-100">
+                        <h2 className="text-2xl font-black text-blue-600 mb-6">YOUR GUIDE</h2>
+                        <div className="p-6 bg-blue-50 rounded-xl mb-6 italic text-lg border-l-4 border-blue-500">
+                            "{guide.opening}"
+                        </div>
+                        <ul className="space-y-4">
+                            {guide.questions.map((q, i) => (
+                                <li key={i} className="p-4 bg-gray-50 rounded-lg font-bold text-gray-800 flex gap-3">
+                                    <span className="text-blue-500">{i+1}.</span> {q}
+                                </li>
+                            ))}
+                        </ul>
+                        <button onClick={() => setGuide(null)} className="mt-8 w-full py-4 bg-gray-100 text-gray-500 font-bold rounded-xl">Start Over</button>
+                    </div>
+                );
+            }
+
             return (
-                <div className="bg-white rounded-3xl shadow-sm p-8 md:p-10 border border-gray-100 max-w-2xl mx-auto">
-                    <StepIndicator currentStep={step} />
-                    {step === 1 && (
-                        <div className="space-y-6">
-                            <label className="block text-sm font-bold text-gray-700 mb-4 flex items-center gap-2 uppercase tracking-wider">
-                                <Icon name="Clock" size={16} className="text-blue-600" /> 1. Select Trigger
-                            </label>
-                            <div className="grid grid-cols-2 gap-3">
-                                {TRIGGERS.map(t => (
-                                    <button key={t} onClick={() => setConfig({ ...config, trigger: t })}
-                                        className={`px-4 py-4 text-sm rounded-xl border text-left transition-all ${config.trigger === t ? 'border-blue-600 bg-blue-50 text-blue-700 font-bold' : 'border-gray-200 text-gray-600'}`}>
+                <div className="max-w-xl mx-auto p-6 pt-16">
+                    <div className="text-center mb-10">
+                        <h1 className="text-4xl font-black text-gray-900">STAY INTERVIEW</h1>
+                        <p className="text-blue-600 font-bold tracking-widest text-sm">MANAGER TOOLKIT</p>
+                    </div>
+
+                    <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
+                        {step === 1 && (
+                            <div className="space-y-4">
+                                <h3 className="font-black text-gray-400 uppercase text-xs tracking-widest">Select Trigger</h3>
+                                {["90-Day Milestone", "Annual Check-In", "At-Risk Signal"].map(t => (
+                                    <button key={t} onClick={() => { setConfig({...config, trigger: t}); setStep(2); }}
+                                        className="w-full p-5 text-left rounded-2xl border-2 border-gray-100 hover:border-blue-500 hover:bg-blue-50 transition-all font-bold text-gray-700">
                                         {t}
                                     </button>
                                 ))}
                             </div>
-                            <div className="mt-6">
-                                <label className="block text-sm font-bold text-gray-700 mb-4 uppercase tracking-wider">Interview Type</label>
-                                <div className="grid grid-cols-2 gap-3">
-                                    {INTERVIEW_TYPES.map(type => (
-                                        <button key={type.id} onClick={() => setConfig({ ...config, type: type.label })}
-                                            className={`flex flex-col items-center justify-center p-4 rounded-xl border transition-all ${config.type === type.label ? 'border-blue-600 bg-blue-50 text-blue-700 font-bold' : 'border-gray-200 text-gray-500'}`}>
-                                            <Icon name={type.icon} size={20} className="mb-2" />
-                                            <span className="text-xs font-semibold">{type.label}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                    {step === 2 && (
-                        <div className="space-y-6">
-                            <label className="block text-sm font-bold text-gray-700 mb-4 flex items-center gap-2 uppercase tracking-wider">
-                                <Icon name="User" size={16} className="text-blue-600" /> 2. Employee Persona
-                            </label>
-                            <div className="grid grid-cols-1 gap-2">
-                                {PERSONAS.map(p => (
-                                    <button key={p} onClick={() => setConfig({ ...config, persona: p })}
-                                        className={`px-4 py-4 text-sm rounded-xl border text-left transition-all ${config.persona === p ? 'border-blue-600 bg-blue-50 text-blue-700 font-bold' : 'border-gray-200 text-gray-600'}`}>
+                        )}
+
+                        {step === 2 && (
+                            <div className="space-y-4">
+                                <h3 className="font-black text-gray-400 uppercase text-xs tracking-widest">Select Persona</h3>
+                                {["High Performer", "New Hire", "Steady Performer"].map(p => (
+                                    <button key={p} onClick={() => { setConfig({...config, persona: p}); setStep(3); }}
+                                        className="w-full p-5 text-left rounded-2xl border-2 border-gray-100 hover:border-blue-500 hover:bg-blue-50 transition-all font-bold text-gray-700">
                                         {p}
                                     </button>
                                 ))}
+                                <button onClick={() => setStep(1)} className="w-full py-2 text-gray-400 text-sm font-bold mt-4">Back</button>
                             </div>
-                        </div>
-                    )}
-                    {step === 3 && (
-                        <div className="space-y-6">
-                            <label className="block text-sm font-bold text-gray-700 mb-4 flex items-center gap-2 uppercase tracking-wider">
-                                <Icon name="MessageSquare" size={16} className="text-blue-600" /> 3. Current Sentiment
-                            </label>
-                            <select value={config.sentiment} onChange={(e) => setConfig({...config, sentiment: e.target.value})} className="w-full px-4 py-4 rounded-xl border border-gray-200 text-sm font-semibold shadow-sm appearance-none bg-white">
-                                <option value="">Select current vibe...</option>
-                                {SENTIMENTS.map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
-                        </div>
-                    )}
-                    <div className="mt-10 flex justify-between gap-4">
-                        {step > 1 ? <button onClick={() => setStep(step - 1)} className="text-gray-500 font-bold text-sm px-4">Back</button> : <div/>}
-                        {step < 3 ? (
-                            <button disabled={!isFormValid()} onClick={() => setStep(step + 1)} className="bg-blue-600 text-white font-bold px-8 py-3 rounded-xl shadow-lg disabled:opacity-50 text-xs uppercase tracking-widest">Continue</button>
-                        ) : (
-                            <button onClick={onGenerate} disabled={loading || !config.sentiment} className="bg-blue-600 text-white font-bold px-10 py-3 rounded-xl shadow-lg disabled:bg-gray-300 flex items-center gap-2 text-xs uppercase tracking-widest">
-                                {loading ? <Icon name="RefreshCw" className="animate-spin" /> : <Icon name="MessagesSquare" />}
-                                {loading ? 'Building Toolkit...' : 'Generate Toolkit'}
-                            </button>
+                        )}
+
+                        {step === 3 && (
+                            <div className="space-y-4">
+                                <h3 className="font-black text-gray-400 uppercase text-xs tracking-widest">Confirm & Generate</h3>
+                                <div className="p-4 bg-gray-50 rounded-xl text-sm font-bold text-gray-500 mb-4">
+                                    Trigger: {config.trigger} <br/>
+                                    Persona: {config.persona}
+                                </div>
+                                <button onClick={handleGenerate} className="w-full py-5 bg-blue-600 text-white font-black rounded-2xl shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all">
+                                    {loading ? "Generating..." : "BUILD TOOLKIT"}
+                                </button>
+                                <button onClick={() => setStep(2)} className="w-full py-2 text-gray-400 text-sm font-bold mt-2">Back</button>
+                            </div>
                         )}
                     </div>
-                </div>
-            );
-        };
-
-        const ResultViewer = ({ guide, onReset, config }) => {
-            const [activeTab, setActiveTab] = useState('questions');
-            const [copied, setCopied] = useState(false);
-            const allQuestions = guide?.tieredQuestions?.flatMap(cat => cat.questions || []) || [];
-
-            return (
-                <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden animate-in fade-in zoom-in-95 duration-500 relative">
-                    <div className="p-8 border-b bg-gray-50/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 print:hidden">
-                        <div>
-                            <h2 className="text-2xl font-bold text-gray-900 leading-tight">Framework Ready</h2>
-                            <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">
-                                {config.trigger} • {config.persona}
-                            </p>
-                        </div>
-                        <div className="flex gap-2">
-                             <button onClick={onReset} className="p-2.5 bg-gray-200 text-gray-600 rounded-xl hover:bg-gray-300 flex items-center gap-2 px-4">
-                                <Icon name="RefreshCw" size={18} />
-                                <span className="text-xs font-bold uppercase tracking-widest">Reset</span>
-                             </button>
-                        </div>
-                    </div>
-                    
-                    <div className="p-8">
-                        <div className="p-6 bg-blue-50 rounded-2xl border-l-4 border-blue-500 text-sm text-gray-700 mb-8 font-medium">
-                            "{guide.openingScript}"
-                        </div>
-                        <div className="space-y-6">
-                            {guide.tieredQuestions.map((cat, i) => (
-                                <div key={i} className="border border-gray-100 rounded-2xl overflow-hidden shadow-sm bg-white">
-                                    <div className="bg-gray-50/80 px-5 py-3 border-b text-[10px] font-black text-gray-400 uppercase tracking-widest">{cat.category}</div>
-                                    <div className="divide-y divide-gray-50">
-                                        {cat.questions.map((q, j) => (
-                                            <div key={j} className="p-5 flex items-start gap-4 hover:bg-gray-50/30 transition-colors">
-                                                <div className="mt-1.5 w-2 h-2 rounded-full bg-blue-300 flex-shrink-0" />
-                                                <p className="text-sm font-semibold text-gray-800 leading-relaxed">{q}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // --- Root App ---
-        function App() {
-            const [config, setConfig] = useState({ trigger: '', customTrigger: '', type: 'Standard (Manager-led)', persona: '', customPersona: '', sentiment: '' });
-            const [loading, setLoading] = useState(false);
-            const [guide, setGuide] = useState(null);
-            const [error, setError] = useState(null);
-
-            const handleGenerate = async () => {
-                setLoading(true);
-                setError(null);
-                try {
-                    const result = await generateStayGuide(config);
-                    setGuide(result);
-                } catch (e) {
-                    setError("AI Coach is temporarily unavailable.");
-                }
-                setLoading(false);
-            };
-
-            return (
-                <div className="min-h-screen bg-[#fcfcfd] text-gray-900 pb-24">
-                    <div className="max-w-6xl mx-auto pt-6 px-4">
-                        <ConfidentialityNotice />
-                    </div>
-                    <header className="max-w-6xl mx-auto py-12 px-4 flex justify-between items-end print:hidden">
-                        <div>
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-xl rotate-3">
-                                    <Icon name="MessagesSquare" className="text-white" size={28} />
-                                </div>
-                                <h1 className="text-3xl font-bold tracking-tight text-gray-900 leading-tight uppercase">Stay Interview Toolkit</h1>
-                            </div>
-                            <p className="text-gray-500 font-medium text-sm border-l-4 border-blue-600 pl-4 ml-1 max-w-2xl">
-                                Conduct meaningful retention conversations at the moments that matter most.
-                            </p>
-                        </div>
-                    </header>
-                    <main className="max-w-6xl mx-auto px-4 print:p-0">
-                        {!guide ? (
-                            <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
-                                <div className="text-center mb-10 max-w-2xl mx-auto space-y-4">
-                                    <h2 className="text-2xl font-bold text-gray-900">Get Your Coaching Framework</h2>
-                                    <p className="text-gray-500 text-sm leading-relaxed font-medium">Enter employee context and receive milestone-specific questions.</p>
-                                </div>
-                                <ManagerForm config={config} setConfig={setConfig} onGenerate={handleGenerate} loading={loading} />
-                                {error && <div className="max-w-2xl mx-auto mt-6 p-4 bg-red-50 text-red-600 rounded-xl text-sm font-bold flex items-center gap-2"><Icon name="AlertCircle" size={18} /> {error}</div>}
-                            </div>
-                        ) : (
-                            <ResultViewer guide={guide} config={config} onReset={() => setGuide(null)} />
-                        )}
-                    </main>
                 </div>
             );
         }
